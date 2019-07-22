@@ -25,7 +25,7 @@ class HelmetDataset(Dataset):
 			# image id, we get from the class variable "im_id"
 			image_id = HelmetDataset.im_id
 			img_path = images_dir + filename
-			ann_path = annotations_dir + image_id + '.xml'
+			ann_path = annotations_dir + str(image_id) + '.xml'
 			# add to dataset
 			self.add_image('dataset', image_id=image_id, path=img_path, annotation=ann_path)
 			HelmetDataset.im_id+=1
