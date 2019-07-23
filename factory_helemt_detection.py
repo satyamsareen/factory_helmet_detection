@@ -4,11 +4,17 @@ from xml.etree import ElementTree
 from numpy import zeros
 from numpy import asarray
 from mrcnn.utils import Dataset
+from mrcnn.config import Config
+from mrcnn.model import MaskRCNN
+from matplotlib import pyplot
+from mrcnn.visualize import display_instances
+from mrcnn.utils import extract_bboxes
+import queue
 
 # class that defines and loads the kangaroo dataset
 class HelmetDataset(Dataset):
 	# load the dataset definitions
-	im_id=1                                    # image id starting from 1
+	im_id=0                                  # image id starting from 1
 	def load_dataset(self, dataset_dir, is_train=True):
 		# define one class
 		self.add_class("dataset", 1, "helmet")
@@ -25,7 +31,7 @@ class HelmetDataset(Dataset):
 			# image id, we get from the class variable "im_id"
 			image_id = HelmetDataset.im_id
 			img_path = images_dir + filename
-			ann_path = annotations_dir + str(image_id) + '.xml'
+			ann_path = annotations_dir + filename.replace(".jpg","") + '.xml'
 			# add to dataset
 			self.add_image('dataset', image_id=image_id, path=img_path, annotation=ann_path)
 			HelmetDataset.im_id+=1
@@ -67,7 +73,9 @@ class HelmetDataset(Dataset):
 			row_s, row_e = box[1], box[3]
 			col_s, col_e = box[0], box[2]
 			masks[row_s:row_e, col_s:col_e, i] = 1
-			class_ids.append(self.class_names.index('kangaroo'))
+			class_ids.append(self.class_names.index('helmet'))
+			class_ids.append(self.class_names.index('person with helmet'))
+			class_ids.append(self.class_names.index('person without helmet'))
 		return masks, asarray(class_ids, dtype='int32')
 
 	# load an image reference
@@ -86,3 +94,51 @@ test_set = HelmetDataset()
 test_set.load_dataset('github_hard_hat', is_train=False)
 test_set.prepare()
 print('Test: %d' % len(test_set.image_ids))
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+# # load an image
+# image_id = 8
+# image = train_set.load_image(image_id)
+# print(image.shape)
+# print("IMAGE PATH IS",test_set.image_reference(242))
+# # load image mask
+# mask, class_ids = train_set.load_mask(image_id)
+# print(mask.shape)
+# # plot image
+# pyplot.imshow(image)
+# # plot mask
+# pyplot.imshow(mask[:, :, 0], cmap='gray', alpha=0.5)
+# pyplot.show()
+# # plot first few images
+# for i in range(9):
+# 	# define subplot
+# 	pyplot.subplot(330 + 1 + i)
+# 	# plot raw pixel data
+# 	image = train_set.load_image(i)
+# 	pyplot.imshow(image)
+# 	# plot all masks
+# 	mask, _ = train_set.load_mask(i)
+# 	for j in range(mask.shape[2]):
+# 		pyplot.imshow(mask[:, :, j], cmap='gray', alpha=0.3)
+# # show the figure
+# pyplot.show()
+# define a configuration for the model
+class HelmetConfig(Config):
+	# define the name of the configuration
+	NAME = "kangaroo_cfg"
+	# number of classes (background + kangaroo)
+	NUM_CLASSES = 1 + 3
+	# number of training steps per epoch
+	STEPS_PER_EPOCH = 131
+# prepare config
+config = HelmetConfig()
+config.display()
+# define the model
+model = MaskRCNN(mode='training', model_dir='./', config=config)
+# load weights (mscoco) and exclude the output layers
+model.load_weights('github_hard_hat/mask_rcnn_coco.h5', by_name=True, exclude=["mrcnn_class_logits", "mrcnn_bbox_fc",  "mrcnn_bbox", "mrcnn_mask"])
+# train weights (output layers or 'heads')
+model.train(train_set, test_set, learning_rate=config.LEARNING_RATE, epochs=5, layers='heads')
+
+
+
