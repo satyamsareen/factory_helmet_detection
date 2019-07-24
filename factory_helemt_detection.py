@@ -9,7 +9,6 @@ from mrcnn.model import MaskRCNN
 from matplotlib import pyplot
 from mrcnn.visualize import display_instances
 from mrcnn.utils import extract_bboxes
-import queue
 
 # class that defines and loads the kangaroo dataset
 class HelmetDataset(Dataset):
